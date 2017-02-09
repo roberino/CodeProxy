@@ -9,28 +9,26 @@ namespace CodeProxy
     public class ClassFactory<T> where T : class
     {
         private readonly InterceptorEngine<T> _interceptors;
+        private readonly TypeInfo _type;
 
-        private bool _isDirty;
         private static Type _generatedType;
         private static int _typeCounter = 0;
 
         public ClassFactory()
         {
-            _isDirty = true;
             _interceptors = new InterceptorEngine<T>();
+            _type = typeof(T).GetTypeInfo();
         }
 
         public ClassFactory<T> AddPropertyImplementation(Func<PropertyInfo, object, object> interceptor)
         {
             _interceptors.Add(interceptor);
-            _isDirty = true;
             return this;
         }
 
         public ClassFactory<T> AddMethodImplementation(Func<MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _interceptors.Add(interceptor);
-            _isDirty = true;
             return this;
         }
 
@@ -38,7 +36,7 @@ namespace CodeProxy
         {
             var gt = _generatedType;
 
-            if (!_isDirty && gt != null) return gt;
+            if (gt != null) return gt;
 
             var targType = typeof(T);
             var source = new StringBuilder();
@@ -47,10 +45,10 @@ namespace CodeProxy
             var targTypeName = GetFullName(targType);
             var interceptorTypeName = "InterceptorEngine<" + targTypeName + ">";
 
-            var referencedTypes = GetProperties<T>()
+            var referencedTypes = GetProperties()
                 .Select(p => p.PropertyType)
-                .Concat(GetMethods<T>().Select(m => m.ReturnType))
-                .Concat(GetMethods<T>().SelectMany(m => m.GetParameters().Select(mp => mp.ParameterType))
+                .Concat(GetMethods().Select(m => m.ReturnType))
+                .Concat(GetMethods().SelectMany(m => m.GetParameters().Select(mp => mp.ParameterType))
                 .Concat(new Type[] { typeof(Dictionary<string, object>) })
                 );
 
@@ -65,12 +63,12 @@ namespace CodeProxy
             source.AppendLine("public T InterceptGet<T>(T val, string name) { return (T)_pi(val, name); }");
             source.AppendLine("public object InterceptMethod(IDictionary<string, object> parameters, string name) { return _mi(parameters, name); }");
 
-            foreach (var prop in GetProperties<T>())
+            foreach (var prop in GetProperties())
             {
                 WritePropDeclaration(prop, source);
             }
 
-            foreach (var method in GetMethods<T>())
+            foreach (var method in GetMethods())
             {
                 WriteMethods(method, source);
             }
@@ -119,17 +117,17 @@ namespace CodeProxy
 
         private string GetAsmName()
         {
-            return typeof(T).Name + "I" + (_typeCounter++);
+            return _type.Name + "I" + (_typeCounter++);
         }
 
-        private IEnumerable<PropertyInfo> GetProperties<T>()
+        private IEnumerable<PropertyInfo> GetProperties()
         {
-            return typeof(T).GetTypeInfo().GetProperties().Where(p => (p.GetMethod.IsAbstract || p.GetMethod.IsVirtual) && p.CanRead || p.CanWrite);
+            return _type.GetProperties().Where(p => (p.GetMethod.IsAbstract || p.GetMethod.IsVirtual) && p.CanRead || p.CanWrite);
         }
 
-        private IEnumerable<MethodInfo> GetMethods<T>()
+        private IEnumerable<MethodInfo> GetMethods()
         {
-            return typeof(T).GetTypeInfo().GetMethods().Where(m => !m.IsSpecialName && (m.IsAbstract || m.IsVirtual));
+            return _type.GetMethods().Where(m => !m.IsSpecialName && (m.IsAbstract || m.IsVirtual));
         }
 
         private void WriteMethods(MethodInfo method, StringBuilder output)

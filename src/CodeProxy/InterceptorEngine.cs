@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace CodeProxy
 {
-    public sealed class InterceptorEngine<T> where T : class
+    internal sealed class InterceptorEngine<T> where T : class
     {
         private readonly IList<Func<PropertyInfo, object, object>> _propertyInterceptors;
         private readonly IList<Func<MethodInfo, IDictionary<string, object>, object>> _methodInterceptors;
