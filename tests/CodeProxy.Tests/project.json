@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0-*",
+  "testRunner": "nunit",
+  "dependencies": {
+    "CodeProxy": "1.0.0-*",
+    "NETStandard.Library": "1.6.0",
+    "NUnit": "3.6.0",
+    "System.Runtime.Loader": "4.3.0",
+    "Microsoft.NETCore.Portable.Compatibility":  "1.0.1"
+  },
+  "runtimes": {
+    "win7-x64": {}
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": "dnxcore50",
+      "dependencies": {
+        "dotnet-test-nunit": "3.4.0-beta-3"
+      }
+    }
+  }
+}
