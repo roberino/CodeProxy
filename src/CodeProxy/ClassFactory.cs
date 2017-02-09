@@ -20,14 +20,14 @@ namespace CodeProxy
             _interceptors = new InterceptorEngine<T>();
         }
 
-        public ClassFactory<T> WithPropertyInterceptor(Func<PropertyInfo, object, object> interceptor)
+        public ClassFactory<T> AddPropertyImplementation(Func<PropertyInfo, object, object> interceptor)
         {
             _interceptors.Add(interceptor);
             _isDirty = true;
             return this;
         }
 
-        public ClassFactory<T> WithMethodInterceptor(Func<MethodInfo, IDictionary<string, object>, object> interceptor)
+        public ClassFactory<T> AddMethodImplementation(Func<MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _interceptors.Add(interceptor);
             _isDirty = true;
@@ -137,6 +137,8 @@ namespace CodeProxy
             var code = output;
             var type = method.ReturnType;
             var returnTypeName = GetTypeName(type);
+            var methodSig = method.GetMethodSignature();
+            var tc = Type.GetTypeCode(method.ReturnType);
 
             code.Append("public " + returnTypeName + " " + method.Name + "(");
 
@@ -155,9 +157,17 @@ namespace CodeProxy
                 code.AppendFormat("parameters[\"{0}\"] = {1};", parameter.Name, parameter.Name);
             }
 
-            code.AppendLine("var res = InterceptMethod(parameters, \"" + method.Name + "\");");
+            code.AppendLine("var res = InterceptMethod(parameters, \"" + methodSig + "\");");
 
-            if (returnTypeName != "void") code.AppendLine("return res;");
+            switch (tc)
+            {
+                case TypeCode.Object:
+                    if (returnTypeName != "void") code.AppendLine("return res as " + returnTypeName + ";");
+                    break;
+                default:
+                    code.AppendLine("return (" + returnTypeName + ")res;");
+                    break;
+            }
 
             code.AppendLine("}");
         }

@@ -22,7 +22,7 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<X>();
 
-            fact.WithPropertyInterceptor((p, v) => v + "x");
+            fact.AddPropertyImplementation((p, v) => v + "x");
 
             var instance = fact.CreateInstance();
 
@@ -48,7 +48,7 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<Y>();
 
-            fact.WithMethodInterceptor((m, p) =>
+            fact.AddMethodImplementation((m, p) =>
             {
                 return p["yp"].ToString();
             });
@@ -60,6 +60,42 @@ namespace CodeProxy.Tests
             Assert.That(y, Is.EqualTo("12"));
         }
 
+        [Test]
+        public void Create_InterfaceWithMethods_SinglePrimativeMethodInterceptor()
+        {
+            var fact = new ClassFactory<Z>();
+
+            fact.AddMethodImplementation((m, p) =>
+            {
+                return System.Convert.ToSingle(p["yp"]);
+            });
+
+            var instance = fact.CreateInstance();
+
+            var y = instance.MethodZ(12);
+
+            Assert.That(y, Is.EqualTo((float)12));
+        }
+
+        [Test]
+        public void Create_InterfaceWithMethods_SingleVoidMethodInterceptor()
+        {
+            var fact = new ClassFactory<V>();
+            var wasIntercepted = false;
+
+            fact.AddMethodImplementation((m, p) =>
+            {
+                wasIntercepted = true;
+                return p.Count;
+            });
+
+            var instance = fact.CreateInstance();
+
+            instance.MethodV(12);
+
+            Assert.That(wasIntercepted);
+        }
+
         public interface X
         {
             string ValueY { get; set; }
@@ -68,6 +104,16 @@ namespace CodeProxy.Tests
         public interface Y
         {
             string MethodY(int yp);
+        }
+
+        public interface Z
+        {
+            float MethodZ(int yp);
+        }
+
+        public interface V
+        {
+            void MethodV(int yp);
         }
     }
 }

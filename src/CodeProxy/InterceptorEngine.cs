@@ -17,7 +17,7 @@ namespace CodeProxy
             _propertyInterceptors = new List<Func<PropertyInfo, object, object>>();
             _methodInterceptors = new List<Func<MethodInfo, IDictionary<string, object>, object>>();
             _properties = typeof(T).GetTypeInfo().GetProperties().ToDictionary(p => p.Name, p => p);
-            _methods = typeof(T).GetTypeInfo().GetMethods().Where(m => !m.IsSpecialName).ToDictionary(m => m.Name + "$" + GetParameterSig(m.GetParameters()), m => m);
+            _methods = typeof(T).GetTypeInfo().GetMethods().Where(m => !m.IsSpecialName).ToDictionary(m => m.GetMethodSignature(), m => m);
         }
 
         internal void Add(Func<PropertyInfo, object, object> interceptor)
@@ -43,9 +43,9 @@ namespace CodeProxy
             return val;
         }
 
-        public object InterceptMethod(IDictionary<string, object> parameters, string methodName)
+        public object InterceptMethod(IDictionary<string, object> parameters, string methodSignature)
         {
-            var method = _methods[methodName + "$" + parameters.Count]; // TODO: This wont work in all cases
+            var method = _methods[methodSignature];
             object val = null;
 
             foreach (var interceptor in _methodInterceptors)
@@ -62,11 +62,6 @@ namespace CodeProxy
             // return primative typ
 
             return val;
-        }
-
-        private string GetParameterSig(IEnumerable<ParameterInfo> parameters)
-        {
-            return parameters.Count().ToString();
         }
     }
 }
