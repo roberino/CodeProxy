@@ -5,12 +5,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Text;
 
 namespace CodeProxy
 {
-    public class AsmGenerator
+    internal class AsmGenerator
     {
         private readonly IList<string> _references;
 
@@ -64,7 +63,11 @@ namespace CodeProxy
                 {
                     ms.Position = 0;
 
-                    return AssemblyLoadContext.Default.LoadFromStream(ms);
+#if NET_STD
+                    return System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromStream(ms);
+#else
+                    return Assembly.Load(ms.ToArray());
+#endif
                 }
             }
         }
