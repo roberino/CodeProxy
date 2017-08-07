@@ -1,20 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0CE39A06-1095-446C-8440-79DA90E0229E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{41B01E62-034A-472C-82F0-42AB99DBFC6B}"
-	ProjectSection(SolutionItems) = preProject
-		global.json = global.json
-	EndProjectSection
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CodeProxy", "src\CodeProxy\CodeProxy.xproj", "{3EEC3171-92FD-4F25-A7FF-A3CCE00ABE29}"
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CodeProxy.Tests", "tests\CodeProxy.Tests\CodeProxy.Tests.xproj", "{941D0D88-0505-4BDD-BDE4-CC592A554BEE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{53CA2B82-C8A4-47A1-B6AF-C0FF2FD95F85}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeProxy", "src\CodeProxy\CodeProxy.csproj", "{3EEC3171-92FD-4F25-A7FF-A3CCE00ABE29}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CodeProxy.Tests", "tests\CodeProxy.Tests\CodeProxy.Tests.csproj", "{941D0D88-0505-4BDD-BDE4-CC592A554BEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

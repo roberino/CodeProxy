@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <AssemblyName>CodeProxy.Tests</AssemblyName>
+    <PackageId>CodeProxy.Tests</PackageId>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
+    <NetStandardImplicitPackageVersion>1.6.0</NetStandardImplicitPackageVersion>
+    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeProxy\CodeProxy.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20170727-01" />
+    <PackageReference Include="NUnit" Version="3.7.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.8.0" />
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageReference Include="Microsoft.NETCore.Portable.Compatibility" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
+    <PackageReference Include="dotnet-test-nunit" Version="3.4.0-beta-3" />
+  </ItemGroup>
+
+</Project>
