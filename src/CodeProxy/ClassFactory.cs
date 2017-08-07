@@ -91,7 +91,7 @@ namespace CodeProxy
         /// Adds a method implementation
         /// </summary>
         /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
-        /// passed the object instance, the method info and the property value</param>
+        /// passed the object instance, the method info and the parameters as a dictionary</param>
         public ClassFactory<T> AddMethodImplementation(Func<T, MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _interceptors.Add((o, m, p) => interceptor((T)o, m, p));
@@ -103,7 +103,7 @@ namespace CodeProxy
         /// </summary>
         /// <param name="methodName">The method name</param>
         /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
-        /// passed the object instance, the method info and the property value</param>
+        /// passed the object instance, the method info and the parameters as a dictionary</param>
         public ClassFactory<T> AddMethodImplementation(string methodName, Func<T, MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _interceptors.Add((o, m, p) =>

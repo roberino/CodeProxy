@@ -62,6 +62,38 @@ namespace CodeProxy.Tests
         }
 
         [Test]
+        public void Create_SimpleInterface_Intercept_GetThenSetNamed()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertyGetter("ValueX", (p, o, v) => v + "x");
+            fact.AddPropertyGetter("ValueY", (p, o, v) => v + "y");
+            fact.AddPropertySetter("ValueX", (p, o, v) => "xb" + v);
+            fact.AddPropertySetter("ValueY", (p, o, v) => "yb" + v);
+
+            var instance = fact.CreateInstance();
+
+            instance.ValueY = "-";
+            instance.ValueX = "-";
+
+            Assert.That(instance.ValueX, Is.EqualTo("xb-x"));
+            Assert.That(instance.ValueY, Is.EqualTo("yb-y"));
+        }
+
+        [Test]
+        public void Create_SimpleInterface_Intercept_Null()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertyGetter((p, o, v) => v + "x");
+
+            var instance = fact.CreateInstance();
+
+            Assert.That(instance.ValueX, Is.EqualTo("x"));
+            Assert.That(instance.ValueY, Is.EqualTo("x"));
+        }
+
+        [Test]
         public void Create_InterfaceWithMethods_NoInterception()
         {
             var fact = new ClassFactory<Y>();
@@ -147,6 +179,7 @@ namespace CodeProxy.Tests
         public interface X
         {
             string ValueY { get; set; }
+            string ValueX { get; set; }
         }
 
         public interface Y
