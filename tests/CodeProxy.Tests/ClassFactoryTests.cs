@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Linq;
 
 namespace CodeProxy.Tests
 {
@@ -18,7 +19,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept()
+        public void Create_SimpleInterface_Intercept_GetAndSet()
         {
             var fact = new ClassFactory<X>();
 
@@ -28,7 +29,36 @@ namespace CodeProxy.Tests
 
             instance.ValueY = "a";
 
+            Assert.That(instance.ValueY, Is.EqualTo("axx"));
+        }
+
+        [Test]
+        public void Create_SimpleInterface_Intercept_GetOnly()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertySetter((p, o, v) => v + "x");
+
+            var instance = fact.CreateInstance();
+
+            instance.ValueY = "a";
+
             Assert.That(instance.ValueY, Is.EqualTo("ax"));
+        }
+
+        [Test]
+        public void Create_SimpleInterface_Intercept_GetThenSet()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertyGetter((p, o, v) => v + "x");
+            fact.AddPropertySetter((p, o, v) => v + "y");
+
+            var instance = fact.CreateInstance();
+
+            instance.ValueY = "a";
+
+            Assert.That(instance.ValueY, Is.EqualTo("ayx"));
         }
 
         [Test]
@@ -48,16 +78,34 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<Y>();
 
-            fact.AddMethodImplementation((m, p) =>
-            {
-                return p["yp"].ToString();
-            });
+            fact.AddMethodImplementation((m, p) => p["yp"].ToString());
 
             var instance = fact.CreateInstance();
 
             var y = instance.MethodY(12);
 
             Assert.That(y, Is.EqualTo("12"));
+        }
+
+        [Test]
+        public void Create_InterfaceWithMethods_TargetMethodInterceptor()
+        {
+            var fact = new ClassFactory<Y>();
+
+            fact.AddMethodImplementation("MethodY", (i, m, p) =>
+            {
+                var val = p.Single().Value.ToString();
+
+                return i.ValueY + "/" + val;
+            });
+
+            var instance = fact.CreateInstance();
+
+            instance.ValueY = "hi";
+
+            var y = instance.MethodY(12);
+
+            Assert.That(y, Is.EqualTo("hi/12"));
         }
 
         [Test]
@@ -103,6 +151,7 @@ namespace CodeProxy.Tests
 
         public interface Y
         {
+            string ValueY { get; set; }
             string MethodY(int yp);
         }
 

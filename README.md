@@ -1,21 +1,42 @@
 # CodeProxy
 
-Dynamic type proxy
+[![Build Status](https://travis-ci.org/roberino/CodeProxy.svg?branch=master)](https://travis-ci.org/roberino/CodeProxy)
+
+A dynamic type proxy. Generate type implementations on the fly.
 
 # Example usage
 
 ```cs
 
-var factory = new ClassFactory<IMyInterface>();
+public interface IMyInterface
+{
+    string X { get; set; }
+	
+	string SayHi(string message);        
+}
 
-factory.WithPropertyInterceptor((p, v) => v + "x");
+public class Program {
 
-factory.AddMethodImplementation((m, p) => p["yp"].ToString());
+	public static void Main() {
 
-var instance = factory.CreateInstance();
+		var factory = new ClassFactory<IMyInterface>();
 
-instance.ValueY = "a";
+		factory.WithPropertyInterceptor((p, v) => v + "x");
 
-instance.MethodA("say hi");
+		factory.AddMethodImplementation("SayHi", (m, p) => {
+			var msg = p.Single().Value; // Get the parameter
+
+            Console.WriteLine(msg);
+
+            return msg;
+		});
+
+		var instance = factory.CreateInstance();
+
+		instance.ValueY = "a";
+
+		instance.SayHi("say hi");
+	}
+}
 			
 ```
