@@ -1,9 +1,7 @@
 language: csharp
-solution: CodeProxy.sln
-install:
-  - mono .nuget/NuGet.exe restore CodeProxy.sln
-# - nuget restore XProxy.sln
-# - nuget install NUnit.ConsoleRunner -Version 3.6.0 -OutputDirectory build
+mono: none
+dotnet: 1.0.4
+dist: trusty
 script:
-  - xbuild /p:Configuration=Release CodeProxy.sln
-# - mono ./build/NUnit.ConsoleRunner.3.6.0/tools/nunit3-console.exe ./tests/XProxy.Tests/bin/Release/XProxy.Tests.dll  --where "cat != BuildOmit"
+ - dotnet restore "src\CodeProxy\CodeProxy.csproj"
+ - dotnet build -f netstandard1.6 "src\CodeProxy\CodeProxy.csproj"

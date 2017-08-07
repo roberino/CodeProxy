@@ -1,3 +1,3 @@
-rem "C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe" /p:AllowUnsafeBlocks=true /m:8 /p:Configuration=Release "CodeProxy.sln"
-dotnet build "src\CodeProxy\project.json"
+dotnet restore "src\CodeProxy\CodeProxy.csproj"
+dotnet build -f netstandard1.6 "src\CodeProxy\CodeProxy.csproj"
 PAUSE
