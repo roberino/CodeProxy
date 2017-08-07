@@ -10,7 +10,7 @@ var factory = new ClassFactory<IMyInterface>();
 
 factory.WithPropertyInterceptor((p, v) => v + "x");
 
-factory.AddMethodImplementation((m, p) => p["yp"].ToString();
+factory.AddMethodImplementation((m, p) => p["yp"].ToString());
 
 var instance = factory.CreateInstance();
 
