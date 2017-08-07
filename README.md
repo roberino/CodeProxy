@@ -10,9 +10,8 @@ A dynamic type proxy. Generate type implementations on the fly.
 
 public interface IMyInterface
 {
-    string X { get; set; }
-	
-	string SayHi(string message);        
+   string X { get; set; }
+   string SayHi(string message);        
 }
 
 public class Program {
@@ -27,8 +26,8 @@ public class Program {
 			var msg = p.Single().Value; // Get the parameter
 
             Console.WriteLine(msg);
-
-            return msg;
+			
+			return msg;
 		});
 
 		var instance = factory.CreateInstance();
