@@ -6,7 +6,7 @@ A dynamic type proxy. Generate type implementations on the fly.
 
 ## Installation
 
-Via NuGet - https://preview.nuget.org/packages/CodeProxy/1.0.2-beta
+Via NuGet - https://preview.nuget.org/packages/CodeProxy
 
 ## Example usage
 
@@ -34,7 +34,7 @@ factory.AddMethodImplementation("SayHi", (i, m, p) => {
     // i = interface
     // m = method
     // p = parameters
-	var msg = p.Single().Value; // Get the only parameter
+    var msg = p.Single().Value; // Get the only parameter
     Console.WriteLine(msg);
     return msg;
 });

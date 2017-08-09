@@ -6,7 +6,7 @@
     <NeutralLanguage>en-GB</NeutralLanguage>
     <VersionPrefix>1.0.1-beta</VersionPrefix>
     <Authors>R Eyres</Authors>
-    <TargetFrameworks>netstandard2.0;netstandard1.6;net461;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard1.6;net461;net45</TargetFrameworks>
     <AssemblyName>CodeProxy</AssemblyName>
     <PackageId>CodeProxy</PackageId>
     <PackageTags>class generator;dynamic proxy;roslyn</PackageTags>
@@ -18,7 +18,7 @@
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <Version>1.0.2-beta</Version>
+    <Version>1.0.3-beta</Version>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
@@ -27,7 +27,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="1.3.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' Or '$(TargetFramework)' == 'netstandard2.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
 
@@ -36,7 +36,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' Or '$(TargetFramework)' == 'netstandard2.0' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <DefineConstants>$(DefineConstants);NET_STD</DefineConstants>
   </PropertyGroup>
 
