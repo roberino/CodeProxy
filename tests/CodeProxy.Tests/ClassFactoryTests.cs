@@ -19,7 +19,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept_GetAndSet()
+        public void InterceptProperty_GetAndSet()
         {
             var fact = new ClassFactory<X>();
 
@@ -33,7 +33,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept_GetOnly()
+        public void InterceptProperty_GetOnly()
         {
             var fact = new ClassFactory<X>();
 
@@ -47,7 +47,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept_GetThenSet()
+        public void InterceptProperty_GetThenSet()
         {
             var fact = new ClassFactory<X>();
 
@@ -62,7 +62,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept_GetThenSetNamed()
+        public void InterceptProperty_GetThenSetNamed()
         {
             var fact = new ClassFactory<X>();
 
@@ -78,6 +78,45 @@ namespace CodeProxy.Tests
 
             Assert.That(instance.ValueX, Is.EqualTo("xb-x"));
             Assert.That(instance.ValueY, Is.EqualTo("yb-y"));
+        }
+
+        [Test]
+        public void InterceptProperty_UsingExpression()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertyGetter(x => x.ValueX, (p, o, v) => v + "x");
+            fact.AddPropertyGetter(x => x.ValueY, (p, o, v) => v + "y");
+            fact.AddPropertySetter(x => x.ValueX, (p, o, v) => "xb" + v);
+            fact.AddPropertySetter(x => x.ValueY, (p, o, v) => "yb" + v);
+
+            var instance = fact.CreateInstance();
+
+            instance.ValueY = "-";
+            instance.ValueX = "-";
+
+            Assert.That(instance.ValueX, Is.EqualTo("xb-x"));
+            Assert.That(instance.ValueY, Is.EqualTo("yb-y"));
+        }
+
+        [Test]
+        public void InterceptProperty_ClearAndReimplement()
+        {
+            var fact = new ClassFactory<X>();
+
+            fact.AddPropertyGetter(x => x.ValueX, (p, o, v) => v + "x");
+
+            var instance = fact.CreateInstance();
+            
+            instance.ValueX = "y";
+
+            Assert.That(instance.ValueX, Is.EqualTo("yx"));
+
+            fact.ClearAllPropertyImplementations();
+            
+            fact.AddPropertyGetter(x => x.ValueX, (p, o, v) => v + "z");
+
+            Assert.That(instance.ValueX, Is.EqualTo("yz"));
         }
 
         [Test]
@@ -120,7 +159,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_TargetMethodInterceptor()
+        public void Create_InterfaceWithMethods_NamedMethodInterceptor()
         {
             var fact = new ClassFactory<Y>();
 
@@ -138,6 +177,23 @@ namespace CodeProxy.Tests
             var y = instance.MethodY(12);
 
             Assert.That(y, Is.EqualTo("hi/12"));
+        }
+
+        [Test]
+        public void Create_InterfaceWithMethods_PredicateMethodInterceptor()
+        {
+            var fact = new ClassFactory<O>();
+
+            fact.AddMethodImplementation(m => m.GetParameters().First().ParameterType == typeof(int), (i, m, p) =>
+            {
+                return 3f;
+            });
+
+            var instance = fact.CreateInstance();
+
+            var y = instance.MethodO(12);
+
+            Assert.That(y, Is.EqualTo(3));
         }
 
         [Test]
@@ -191,6 +247,12 @@ namespace CodeProxy.Tests
         public interface Z
         {
             float MethodZ(int yp);
+        }
+
+        public interface O
+        {
+            float MethodO(int yp);
+            float MethodO(string yp);
         }
 
         public interface V

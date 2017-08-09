@@ -20,14 +20,24 @@ namespace CodeProxy
             _methods = typeof(T).GetTypeInfo().GetMethods().Where(m => !m.IsSpecialName).ToDictionary(m => m.GetMethodSignature(), m => m);
         }
 
-        internal void Add(Func<object, PropertyInterceptionType, PropertyInfo, object, object> interceptor)
+        public void Add(Func<object, PropertyInterceptionType, PropertyInfo, object, object> interceptor)
         {
             _propertyInterceptors.Add(interceptor);
         }
 
-        internal void Add(Func<object, MethodInfo, IDictionary<string, object>, object> interceptor)
+        public void Add(Func<object, MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _methodInterceptors.Add(interceptor);
+        }
+
+        public void ClearPropertyInterceptors()
+        {
+            _propertyInterceptors.Clear();
+        }
+
+        public void ClearMethodInterceptors()
+        {
+            _methodInterceptors.Clear();
         }
 
         public object InterceptGet(object instance, object value, string propName)

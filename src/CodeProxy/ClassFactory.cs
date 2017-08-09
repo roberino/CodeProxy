@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -21,6 +22,18 @@ namespace CodeProxy
         {
             _interceptors = new InterceptorEngine<T>();
             _type = typeof(T).GetTypeInfo();
+        }
+
+        public ClassFactory<T> ClearAllPropertyImplementations()
+        {
+            _interceptors.ClearPropertyInterceptors();
+            return this;
+        }
+
+        public ClassFactory<T> ClearAllMethodImplementations()
+        {
+            _interceptors.ClearMethodInterceptors();
+            return this;
         }
 
         /// <summary>
@@ -56,6 +69,17 @@ namespace CodeProxy
         }
 
         /// <summary>
+        /// Adds a property get implementation
+        /// </summary>
+        /// <param name="propertySelector">An expression which selects the target property</param>
+        /// <param name="interceptor">A function which will be called when a property is invoked - the function will be
+        /// passed the object instance, the property info and the property value</param>
+        public ClassFactory<T> AddPropertyGetter<O>(Expression<Func<T, O>>  propertySelector, Func<T, PropertyInfo, object, object> interceptor)
+        {
+            return AddPropertyImplementation(PropertyInterceptionType.GetProperty, GetPropertyName(propertySelector), interceptor);
+        }
+
+        /// <summary>
         /// Adds a property set implementation
         /// </summary>
         /// <param name="interceptor">A function which will be called when a property is invoked - the function will be
@@ -77,6 +101,17 @@ namespace CodeProxy
         }
 
         /// <summary>
+        /// Adds a property set implementation
+        /// </summary>
+        /// <param name="propertySelector">An expression which selects the target property</param>
+        /// <param name="interceptor">A function which will be called when a property is invoked - the function will be
+        /// passed the object instance, the property info and the property value</param>
+        public ClassFactory<T> AddPropertySetter<O>(Expression<Func<T, O>> propertySelector, Func<T, PropertyInfo, object, object> interceptor)
+        {
+            return AddPropertyImplementation(PropertyInterceptionType.SetProperty, GetPropertyName(propertySelector), interceptor);
+        }
+
+        /// <summary>
         /// Adds a method implementation
         /// </summary>
         /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
@@ -95,6 +130,25 @@ namespace CodeProxy
         public ClassFactory<T> AddMethodImplementation(Func<T, MethodInfo, IDictionary<string, object>, object> interceptor)
         {
             _interceptors.Add((o, m, p) => interceptor((T)o, m, p));
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a method implementation for a specific method
+        /// </summary>
+        /// <param name="methodSelector">A predicate which selects relevant methods</param>
+        /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
+        /// passed the object instance, the method info and the parameters as a dictionary</param>
+        public ClassFactory<T> AddMethodImplementation(Func<MethodInfo, bool> methodSelector, Func<T, MethodInfo, IDictionary<string, object>, object> interceptor)
+        {
+            _interceptors.Add((o, m, p) =>
+            {
+                if ((methodSelector?.Invoke(m)).GetValueOrDefault())
+                {
+                    return interceptor((T)o, m, p);
+                }
+                return ObjectConstants.IgnoreValue;
+            });
             return this;
         }
 
@@ -220,6 +274,11 @@ namespace CodeProxy
             }
 
             return nameBuilder.ToString();
+        }
+
+        internal static string GetPropertyName<TField>(Expression<Func<T, TField>> propertyExpression)
+        {
+            return (propertyExpression.Body as MemberExpression ?? ((UnaryExpression)propertyExpression.Body).Operand as MemberExpression).Member.Name;
         }
 
         private string GetAsmName()
