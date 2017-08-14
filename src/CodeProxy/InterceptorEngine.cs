@@ -79,15 +79,19 @@ namespace CodeProxy
         {
             object nextVal = null;
             var val = value;
-            var prop = _properties[propName];
 
-            foreach (var interceptor in _propertyInterceptors)
+            if (_propertyInterceptors.Any())
             {
-                nextVal = interceptor(instance, (PropertyInterceptionType)itype, prop, val);
+                var prop = _properties[propName];
 
-                if (!(nextVal is ObjectConstants.Ignore)) // TODO: Not very optimised
+                foreach (var interceptor in _propertyInterceptors)
                 {
-                    val = nextVal;
+                    nextVal = interceptor(instance, (PropertyInterceptionType)itype, prop, val);
+
+                    if (!(nextVal is ObjectConstants.Ignore)) // TODO: Not very optimised
+                    {
+                        val = nextVal;
+                    }
                 }
             }
 
