@@ -53,12 +53,16 @@ namespace CodeProxy.Http
 
             result.Wait(instance.DefaultTimeout);
 
-            return result.GetType().GetTypeInfo().GetProperty("Result").GetValue(result);
+            if (result.GetType().GetTypeInfo().IsGenericType) return result.GetType().GetTypeInfo().GetProperty("Result").GetValue(result);
+
+            return new object();
         }
 
         private Task InvokeServiceAsync(T instance, MethodInfo method, IDictionary<string, object> parameters)
         {
             var returnType = GetInnerTaskType(method.ReturnType);
+
+            if (returnType == typeof(void)) return InvokeServiceVoidAsync(instance, method, parameters);
 
             var genInvoker = _asyncInvoker.MakeGenericMethod(returnType);
 
@@ -67,7 +71,7 @@ namespace CodeProxy.Http
 
         private async Task<R> InvokeServiceTypedAsync<R>(T instance, MethodInfo method, IDictionary<string, object> parameters)
         {
-            var httpRequest = _methodBinder.Bind(instance.BaseUri, method, parameters);
+            var httpRequest = _methodBinder.Bind(instance, method, parameters);
 
             var response = await _httpClient.SendAsync(httpRequest);
 
@@ -83,8 +87,19 @@ namespace CodeProxy.Http
             return _mediaSerialiser.Deserialize<R>(responseData.MimeType, responseData.Encoding, stream);
         }
 
+        private async Task InvokeServiceVoidAsync(T instance, MethodInfo method, IDictionary<string, object> parameters)
+        {
+            var httpRequest = _methodBinder.Bind(instance, method, parameters);
+
+            var response = await _httpClient.SendAsync(httpRequest);
+
+            var stream = await response.Content.ReadAsStreamAsync();
+        }
+
         private Type GetInnerTaskType(Type taskType)
         {
+            if (!taskType.GetTypeInfo().IsGenericType) return typeof(void);
+
             return taskType.GetTypeInfo().GetGenericArguments().First();
         }
     }
