@@ -224,6 +224,11 @@ namespace CodeProxy
                 .UseReference<AsmGenerator>()
                 .UseReference<Dictionary<string, object>>();
 
+            foreach(var rtype in referencedTypes)
+            {
+                generator.UseReference(rtype);
+            }
+
             var asm = generator.Compile(source.ToString(), asmName);
 
             var type = asm.ExportedTypes.First();
@@ -364,6 +369,36 @@ namespace CodeProxy
             }
             else
             {
+                var typeInf = type.GetTypeInfo();
+
+                if (typeInf.IsGenericType)
+                {
+                    var baseName = typeInf.Name.Substring(0, typeInf.Name.IndexOf('`'));
+                    
+                    var isFirst = true;
+
+                    foreach (var tp in typeInf.GetGenericArguments())
+                    {
+                        string typeParamName = GetTypeName(tp);
+
+                        if (isFirst)
+                        {
+                            baseName += "<";
+                            isFirst = false;
+                        }
+                        else
+                        {
+                            baseName += ",";
+                        }
+
+                        baseName += typeParamName;
+                    }
+
+                    baseName += ">";
+
+                    return baseName;
+                }
+
                 return type.Name;
             }
         }

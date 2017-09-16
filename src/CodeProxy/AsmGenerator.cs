@@ -72,16 +72,14 @@ namespace CodeProxy
             }
         }
 
-        //private void LoadReferencedAsms()
-        //{
-        //    var referencedAssemblies = Assembly.GetEntryAssembly().GetReferencedAssemblies();
-        //    foreach (var referencedAssembly in referencedAssemblies)
-        //    {
-        //        var loadedAssembly = Assembly.Load(referencedAssembly);
+        private IEnumerable<string> GetCoreLibRefs()
+        {
+            var coreDir = Directory.GetParent(typeof(object).GetTypeInfo().Assembly.Location);
 
-        //        _references.Add(MetadataReference.CreateFromFile(loadedAssembly.Location));
-        //    }
-        //}
+            var coreLibs = coreDir.GetFiles("*.dll").Where(f => f.Name.StartsWith("System.") || f.Name.StartsWith("mscorlib")).Select(f => f.FullName);
+
+            return coreLibs;
+        }
 
         private SyntaxTree CreateSyntaxTree(string sourceCode)
         {
@@ -93,7 +91,17 @@ namespace CodeProxy
             return CSharpCompilation.Create(
                 assemblyName,
                 syntaxTrees: new[] { tree },
-                references: _references.Distinct().Select(p => MetadataReference.CreateFromFile(p)).ToList(),
+                references: _references.Concat(GetCoreLibRefs()).Distinct().Select(p =>
+                {
+                    try
+                    {
+                        return MetadataReference.CreateFromFile(p);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        return null;
+                    }
+                }).Where(r => r != null).ToList(),
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         }
 

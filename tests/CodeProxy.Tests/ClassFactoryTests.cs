@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace CodeProxy.Tests
 {
@@ -230,6 +231,28 @@ namespace CodeProxy.Tests
             instance.MethodV(12);
 
             Assert.That(wasIntercepted);
+        }
+
+        [Test]
+        public async Task Create_InterfaceWithAsyncMethods_ShouldCompileOk()
+        {
+            var fact = new ClassFactory<IIsAsync>();
+
+            fact.AddMethodImplementation((m, p) =>
+            {
+                return Task.FromResult("test");
+            });
+
+            var instance = fact.CreateInstance();
+
+            var value = await instance.GetStuffAsync();
+
+            Assert.That(value, Is.EqualTo("test"));
+        }
+
+        public interface IIsAsync
+        {
+            Task<string> GetStuffAsync();
         }
 
         public interface X

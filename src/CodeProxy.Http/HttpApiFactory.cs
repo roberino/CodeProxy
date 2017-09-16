@@ -51,9 +51,11 @@ namespace CodeProxy.Http
         {
             var result = InvokeServiceAsync(instance, method, parameters);
 
+            var resultType = result.GetType().GetTypeInfo();
+
             result.Wait(instance.DefaultTimeout);
 
-            if (result.GetType().GetTypeInfo().IsGenericType) return result.GetType().GetTypeInfo().GetProperty("Result").GetValue(result);
+            if (resultType.IsGenericType) return resultType.GetProperty("Result").GetValue(result);
 
             return new object();
         }
