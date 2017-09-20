@@ -250,9 +250,24 @@ namespace CodeProxy.Tests
             Assert.That(value, Is.EqualTo("test"));
         }
 
+        [Test]
+        public void Create_InterfaceWithInheritance_ShouldCompileOk()
+        {
+            var fact = new ClassFactory<IInherit>();
+
+            var instance = fact.CreateInstance();
+
+            Assert.That(instance, Is.Not.Null);
+        }
+
         public interface IIsAsync
         {
             Task<string> GetStuffAsync();
+        }
+
+        public interface IInherit : X
+        {
+            string GetStuff();
         }
 
         public interface X

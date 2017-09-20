@@ -192,6 +192,7 @@ namespace CodeProxy
                 .Select(p => p.PropertyType)
                 .Concat(GetMethods().Select(m => m.ReturnType))
                 .Concat(GetMethods().SelectMany(m => m.GetParameters().Select(mp => mp.ParameterType))
+                .Concat(GetBaseTypes())
                 .Concat(new Type[] { typeof(Dictionary<string, object>) })
                 );
 
@@ -291,21 +292,75 @@ namespace CodeProxy
             return _type.Name + "I" + (_typeCounter++);
         }
 
+        private IEnumerable<Type> GetBaseTypes()
+        {
+            var t = _type.BaseType;
+
+            while (t != typeof(object) && t != null)
+            {
+                yield return t;
+
+                t = t.GetTypeInfo().BaseType;
+            }
+
+            var ift = _type.GetInterfaces().ToList();
+
+            while (ift.Any())
+            {
+                var iftn = new List<Type>();
+
+                foreach(var t2 in ift)
+                {
+                    iftn.AddRange(t2.GetTypeInfo().GetInterfaces());
+                    yield return t2;
+                }
+
+                ift = iftn;
+            }
+        }
+
         private IEnumerable<PropertyInfo> GetProperties()
         {
-            return _type.GetProperties().Where(p => (p.GetMethod.IsAbstract || p.GetMethod.IsVirtual) && p.CanRead || p.CanWrite);
+            return _type
+                .GetAllProperties()
+                .Where(p => (p.GetMethod.IsAbstract || p.GetMethod.IsVirtual) && p.CanRead || p.CanWrite);
         }
 
         private IEnumerable<MethodInfo> GetMethods()
         {
-            return _type.GetMethods().Where(m => !m.IsSpecialName && (m.IsAbstract || m.IsVirtual));
+            return _type.GetAbstractAndVirtualMethods();
         }
+
+        private IEnumerable<TypeInfo> GetTypeChain(TypeInfo type)
+        {
+            yield return type;
+
+            if (type.BaseType != null)
+            {
+                foreach (var ifaceb in GetTypeChain(type.BaseType.GetTypeInfo()))
+                {
+                    yield return ifaceb;
+                }
+            }
+
+            foreach(var iface in type.GetInterfaces())
+            {
+                var ifacet = iface.GetTypeInfo();
+
+                yield return ifacet;
+
+                foreach(var ifaceb in GetTypeChain(ifacet))
+                {
+                    yield return ifaceb;
+                }
+            }
+        } 
 
         private void WriteMethods(MethodInfo method, StringBuilder output)
         {
             var code = output;
             var type = method.ReturnType;
-            var returnTypeName = GetTypeName(type);
+            var returnTypeName = type.GetTypeName();
             var methodSig = method.GetMethodSignature();
             var tc = Type.GetTypeCode(method.ReturnType);
 
@@ -345,7 +400,7 @@ namespace CodeProxy
         {
             var type = prop.PropertyType;
             var name = prop.Name;
-            var returnTypeName = GetTypeName(type);
+            var returnTypeName = type.GetTypeName();
             var privateName = "_" + GetCamCase(name);
 
             output.AppendLine("private " + returnTypeName + " " + privateName + ";");
@@ -359,48 +414,6 @@ namespace CodeProxy
             if (string.IsNullOrEmpty(name)) return name;
 
             return name.Substring(0, 1).ToLower() + (name.Length > 1 ? name.Substring(1) : "");
-        }
-
-        private string GetTypeName(Type type)
-        {
-            if (type == typeof(void))
-            {
-                return "void";
-            }
-            else
-            {
-                var typeInf = type.GetTypeInfo();
-
-                if (typeInf.IsGenericType)
-                {
-                    var baseName = typeInf.Name.Substring(0, typeInf.Name.IndexOf('`'));
-                    
-                    var isFirst = true;
-
-                    foreach (var tp in typeInf.GetGenericArguments())
-                    {
-                        string typeParamName = GetTypeName(tp);
-
-                        if (isFirst)
-                        {
-                            baseName += "<";
-                            isFirst = false;
-                        }
-                        else
-                        {
-                            baseName += ",";
-                        }
-
-                        baseName += typeParamName;
-                    }
-
-                    baseName += ">";
-
-                    return baseName;
-                }
-
-                return type.Name;
-            }
         }
     }
 }

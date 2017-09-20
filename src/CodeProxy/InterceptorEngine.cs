@@ -16,8 +16,8 @@ namespace CodeProxy
         {
             _propertyInterceptors = new List<Func<object, PropertyInterceptionType, PropertyInfo, object, object>>();
             _methodInterceptors = new List<Func<object, MethodInfo, IDictionary<string, object>, object>>();
-            _properties = typeof(T).GetTypeInfo().GetProperties().ToDictionary(p => p.Name, p => p);
-            _methods = typeof(T).GetTypeInfo().GetMethods().Where(m => !m.IsSpecialName).ToDictionary(m => m.GetMethodSignature(), m => m);
+            _properties = typeof(T).GetTypeInfo().GetAllProperties().ToDictionary(p => p.Name, p => p);
+            _methods = typeof(T).GetTypeInfo().GetAbstractAndVirtualMethods().ToDictionary(m => m.GetMethodSignature(), m => m);
         }
 
         public void Add(Func<object, PropertyInterceptionType, PropertyInfo, object, object> interceptor)

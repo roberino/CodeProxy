@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CodeProxy.Http.Tests
 {
-    public class HttpApiFactoryTests
+    public class HttpApiFactoryTests : IDisposable
     {
         private readonly TestServer _server;
         private readonly HttpClient _client;
@@ -40,6 +40,11 @@ namespace CodeProxy.Http.Tests
             var data = await proxy.GetDataAsync("test");
 
             Assert.Equal("test", data);
+        }
+
+        public void Dispose()
+        {
+            _server.Dispose();
         }
 
         public interface ITestApi : IHttpApiClient

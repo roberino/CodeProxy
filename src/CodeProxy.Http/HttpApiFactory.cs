@@ -20,7 +20,10 @@ namespace CodeProxy.Http
             _httpClient = httpClient ?? new DefaultHttpClient();
             _mediaSerialiser = mediaSerialiser;
             _methodBinder = new MethodBinder();
-            _asyncInvoker = GetType().GetTypeInfo().GetMethod("InvokeServiceTypedAsync");
+
+            var myMethods = GetType().GetTypeInfo().GetMethods(BindingFlags.NonPublic | BindingFlags.Instance);
+
+            _asyncInvoker = myMethods.Where(n => n.Name.StartsWith("InvokeServiceTypedAsync")).FirstOrDefault();
         }
 
         public T Create(Uri apiBaseUri)
@@ -73,7 +76,7 @@ namespace CodeProxy.Http
 
         private async Task<R> InvokeServiceTypedAsync<R>(T instance, MethodInfo method, IDictionary<string, object> parameters)
         {
-            var httpRequest = _methodBinder.Bind(instance, method, parameters);
+            var httpRequest = _methodBinder.Bind(instance, method, parameters);            
 
             var response = await _httpClient.SendAsync(httpRequest);
 

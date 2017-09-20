@@ -76,7 +76,7 @@ namespace CodeProxy
         {
             var coreDir = Directory.GetParent(typeof(object).GetTypeInfo().Assembly.Location);
 
-            var coreLibs = coreDir.GetFiles("*.dll").Where(f => f.Name.StartsWith("System.") || f.Name.StartsWith("mscorlib")).Select(f => f.FullName);
+            var coreLibs = coreDir.GetFiles("*.dll").Where(f => f.Name.StartsWith("netstandard") || f.Name.StartsWith("System.") || f.Name.StartsWith("mscorlib")).Select(f => f.FullName);
 
             return coreLibs;
         }
