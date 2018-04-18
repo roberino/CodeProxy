@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <AssemblyName>CodeProxy.Tests</AssemblyName>
     <PackageId>CodeProxy.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\CodeProxy.FailSafe\CodeProxy.FailSafe.csproj" />
     <ProjectReference Include="..\..\src\CodeProxy\CodeProxy.csproj" />
   </ItemGroup>
 

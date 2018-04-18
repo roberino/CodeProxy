@@ -3,13 +3,13 @@ using System.Threading.Tasks;
 
 namespace CodeProxy.Http
 {
-    internal class DefaultHttpClient : IHttpClient
+    internal class HttpClientWrapper : IHttpClient
     {
         private readonly HttpClient _httpClient;
 
-        public DefaultHttpClient()
+        public HttpClientWrapper(HttpClient httpClient = null)
         {
-            _httpClient = new HttpClient();
+            _httpClient = httpClient ?? new HttpClient();
         }
 
         public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)

@@ -8,14 +8,13 @@ namespace CodeProxy.Tests
     public class AsmGeneratorTests
     {
         [Test]
-        public void Compile_EmptyClass_ReturnsAssemblyWithOneClass()
+        public void WhenBasicClassDefSupplied_ThenReturnsAssemblyWithOneClass()
         {
             var asmGen = new AsmGenerator();
 
             var asm = asmGen.Compile("public class X { }");
 
-            Assert.That(asm, Is.Not.Null);
-            Assert.That(asm.ExportedTypes.Count(), Is.EqualTo(1));
+            Assert.That(asm.ExportedTypes.Single().Name, Is.EqualTo("X"));
 
             Console.WriteLine(asm.FullName);
         }

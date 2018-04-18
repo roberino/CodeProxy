@@ -17,7 +17,7 @@ namespace CodeProxy.Http
 
         public HttpApiFactory(IHttpClient httpClient = null, IMediaSerializer mediaSerialiser = null)
         {
-            _httpClient = httpClient ?? new DefaultHttpClient();
+            _httpClient = httpClient ?? new HttpClientWrapper();
             _mediaSerialiser = mediaSerialiser;
             _methodBinder = new MethodBinder();
 

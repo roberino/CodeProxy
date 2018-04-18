@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@ namespace CodeProxy.Tests
     public class ClassFactoryTests
     {
         [Test]
-        public void Create_SimpleInterface()
+        public void WhenPropertySet_ThenPropertyValueCanBeRetrieved()
         {
             var fact = new ClassFactory<X>();
 
@@ -20,7 +21,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_GetAndSet()
+        public void WhenInterceptPropertyGetAndSet_ThenPropertyInterceptorUsed()
         {
             var fact = new ClassFactory<X>();
 
@@ -34,7 +35,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_GetOnly()
+        public void WhenInterceptPropertyWithSetter_ThenSetterInvokedOnGet()
         {
             var fact = new ClassFactory<X>();
 
@@ -48,7 +49,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_GetThenSet()
+        public void WhenInterceptPropertyWithGetAndSet_ThenBothInvoked()
         {
             var fact = new ClassFactory<X>();
 
@@ -63,7 +64,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_GetThenSetNamed()
+        public void WhenInterceptPropertyWithSpecificName_ThenNamedPropertySetterInvoked()
         {
             var fact = new ClassFactory<X>();
 
@@ -82,7 +83,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_UsingExpression()
+        public void WhenInterceptPropertyUsingExpression_ThenTargetPropertyImplemented()
         {
             var fact = new ClassFactory<X>();
 
@@ -101,7 +102,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void InterceptProperty_ClearAndReimplement()
+        public void WhenInterceptPropertyAndClearAndReimplement_ThenNewImplementationUsed()
         {
             var fact = new ClassFactory<X>();
 
@@ -121,7 +122,26 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_SimpleInterface_Intercept_Null()
+        public async Task WhenInterceptAsyncMethod_ThenAsyncResultReturned()
+        {
+            var fact = new ClassFactory<IIsAsync>();
+
+            fact.AddAsyncMethodImplementation(async (m, p) =>
+            {
+                await Task.Delay(2);
+
+                return "hi";
+            });
+
+            var instance = fact.CreateInstance();
+
+            var value = await instance.GetStuffAsync();
+
+            Assert.That(value, Is.EqualTo("hi"));
+        }
+
+        [Test]
+        public void WhenInterceptUnsetProperty_ThenValueReturned()
         {
             var fact = new ClassFactory<X>();
 
@@ -134,7 +154,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_NoInterception()
+        public void WhenInvokeObjectMethodWithNoInterception_ThenNullReturned()
         {
             var fact = new ClassFactory<Y>();
 
@@ -146,7 +166,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_SingleMethodInterceptor()
+        public void WhenMethodInterceptorWithArg_ThenArgCanBeReferenced()
         {
             var fact = new ClassFactory<Y>();
 
@@ -160,7 +180,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_NamedMethodInterceptor()
+        public void WhenNamedMethodInterceptorAdded_ThenSpecificMethodTargetted()
         {
             var fact = new ClassFactory<Y>();
 
@@ -176,29 +196,40 @@ namespace CodeProxy.Tests
             instance.ValueY = "hi";
 
             var y = instance.MethodY(12);
-
+            
             Assert.That(y, Is.EqualTo("hi/12"));
+
+            var x = instance.MethodX(123);
+
+            Assert.That(x, Is.Null);
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_PredicateMethodInterceptor()
+        public void WhenPredicateMethodInterceptorUsed_ThenMatchingMethodIntercepted()
         {
             var fact = new ClassFactory<O>();
 
             fact.AddMethodImplementation(m => m.GetParameters().First().ParameterType == typeof(int), (i, m, p) =>
             {
-                return 3f;
+                return 3f * Convert.ToSingle(p.First().Value);
+            });
+
+            fact.AddMethodImplementation(m => m.GetParameters().First().ParameterType == typeof(string), (i, m, p) =>
+            {
+                return 4f;
             });
 
             var instance = fact.CreateInstance();
 
-            var y = instance.MethodO(12);
+            var y = instance.MethodO(4);
+            var x = instance.MethodO("a");
 
-            Assert.That(y, Is.EqualTo(3));
+            Assert.That(y, Is.EqualTo(12));
+            Assert.That(x, Is.EqualTo(4));
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_SinglePrimativeMethodInterceptor()
+        public void WhenDifferentPrimativeTypeReturnedByMethodInterceptor_ThenValueConverted()
         {
             var fact = new ClassFactory<Z>();
 
@@ -215,7 +246,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithMethods_SingleVoidMethodInterceptor()
+        public void WhenSingleVoidMethodInterceptor_ThenMethodIntercepted()
         {
             var fact = new ClassFactory<V>();
             var wasIntercepted = false;
@@ -234,7 +265,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public async Task Create_InterfaceWithAsyncMethods_ShouldCompileOk()
+        public async Task WhenAsyncMethodIntercepted_ThenTaskResultReturned()
         {
             var fact = new ClassFactory<IIsAsync>();
 
@@ -251,13 +282,57 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public void Create_InterfaceWithInheritance_ShouldCompileOk()
+        public void WhenInterfaceWithInheritance_ThenInheritedPropertiesCanBeIntercepted()
         {
             var fact = new ClassFactory<IInherit>();
 
+            fact.AddPropertyGetter((i, p, v) => p.Name);
+
             var instance = fact.CreateInstance();
 
-            Assert.That(instance, Is.Not.Null);
+            Assert.That(instance.ValueX, Is.EqualTo(nameof(instance.ValueX)));
+            Assert.That(instance.ValueY, Is.EqualTo(nameof(instance.ValueY)));
+        }
+
+        [Test]
+        public async Task WhenVirtualClassWithInterface_ThenInheritedPropertiesCanBeIntercepted()
+        {
+            var fact = new ClassFactory<IsAsync>();
+
+            fact.AddAsyncMethodImplementation(async (m, a) => await Task.FromResult("x"));
+
+            var instance = fact.CreateInstance();
+
+            var result = await instance.GetStuffAsync();
+
+            Assert.That(result, Is.EqualTo("x"));
+        }
+
+        [Test]
+        public async Task WhenAbstractClassWithInterface_ThenInheritedPropertiesCanBeIntercepted()
+        {
+            var fact = new ClassFactory<IsAbstractAsync>();
+
+            fact.AddAsyncMethodImplementation(async (m, a) => await Task.FromResult("x"));
+
+            var instance = fact.CreateInstance();
+
+            var result = await instance.GetStuffAsync();
+
+            Assert.That(result, Is.EqualTo("x"));
+        }
+
+        public class IsAsync : IIsAsync
+        {
+            public virtual Task<string> GetStuffAsync()
+            {
+                return Task.FromResult("hey");
+            }
+        }
+
+        public abstract class IsAbstractAsync : IIsAsync
+        {
+            public abstract Task<string> GetStuffAsync();
         }
 
         public interface IIsAsync
@@ -280,6 +355,7 @@ namespace CodeProxy.Tests
         {
             string ValueY { get; set; }
             string MethodY(int yp);
+            string MethodX(int yp);
         }
 
         public interface Z

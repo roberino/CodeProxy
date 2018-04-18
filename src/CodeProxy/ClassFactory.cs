@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace CodeProxy
 {
@@ -20,8 +20,8 @@ namespace CodeProxy
         /// </summary>
         public ClassFactory()
         {
+            _type = ValidateType();
             _interceptors = new InterceptorEngine<T>();
-            _type = typeof(T).GetTypeInfo();
         }
 
         public ClassFactory<T> ClearAllPropertyImplementations()
@@ -126,6 +126,26 @@ namespace CodeProxy
         /// Adds a method implementation
         /// </summary>
         /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
+        /// passed the method info and the property value</param>
+        public ClassFactory<T> AddAsyncMethodImplementation<R>(Func<MethodInfo, IDictionary<string, object>, Task<R>> interceptor)
+        {
+            _interceptors.Add((o, m, p) =>
+            {
+                if (MethodFilters.AsyncMethods(m))
+                {
+                    return interceptor(m, p);
+                }
+
+                return ObjectConstants.IgnoreValue;
+            });
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a method implementation
+        /// </summary>
+        /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
         /// passed the object instance, the method info and the parameters as a dictionary</param>
         public ClassFactory<T> AddMethodImplementation(Func<T, MethodInfo, IDictionary<string, object>, object> interceptor)
         {
@@ -181,44 +201,19 @@ namespace CodeProxy
 
             if (gt != null) return gt;
 
-            var targType = typeof(T);
-            var source = new StringBuilder();
             var asmName = GetAsmName();
-            var name = asmName + "C";
-            var targTypeName = GetFullName(targType);
-            var interceptorTypeName = "InterceptorEngine<" + targTypeName + ">";
+            var properties = GetProperties();
+            var methods = GetMethods();
 
-            var referencedTypes = GetProperties()
+            var referencedTypes = properties
                 .Select(p => p.PropertyType)
-                .Concat(GetMethods().Select(m => m.ReturnType))
-                .Concat(GetMethods().SelectMany(m => m.GetParameters().Select(mp => mp.ParameterType))
+                .Concat(methods.Select(m => m.ReturnType))
+                .Concat(methods.SelectMany(m => m.GetParameters().Select(mp => mp.ParameterType))
                 .Concat(GetBaseTypes())
                 .Concat(new Type[] { typeof(Dictionary<string, object>) })
                 );
 
-            source.AppendLine("using System;");
-            source.AppendLine("using " + targType.Namespace + ";");
-            source.AppendLine("using " + GetType().Namespace + ";");
-            source.Append(GetUsings(referencedTypes));
-            source.AppendLine("public class " + name + " : " + targTypeName + " {");
-            source.AppendLine("private readonly Func<int, object, object, string, object> _pi;");
-            source.AppendLine("private readonly Func<object, IDictionary<string, object>, string, object> _mi;");
-            source.AppendLine("public " + name + "(Func<int, object, object, string, object> pi, Func<object, IDictionary<string, object>, string, object> mi) { _pi = pi; _mi = mi; }");
-            source.AppendLine("public T InterceptGet<T>(T val, string name) { return (T)_pi(2, this, val, name); }");
-            source.AppendLine("public T InterceptSet<T>(T val, string name) { return (T)_pi(1, this, val, name); }");
-            source.AppendLine("public object InterceptMethod(IDictionary<string, object> parameters, string name) { return _mi(this, parameters, name); }");
-
-            foreach (var prop in GetProperties())
-            {
-                WritePropDeclaration(prop, source);
-            }
-
-            foreach (var method in GetMethods())
-            {
-                WriteMethods(method, source);
-            }
-
-            source.AppendLine("}");
+            var source = new ClassSourceGenerator<T>().CreateSource(asmName, properties, methods, referencedTypes);
 
             var generator = new AsmGenerator()
                 .UseReference<T>()
@@ -230,7 +225,7 @@ namespace CodeProxy
                 generator.UseReference(rtype);
             }
 
-            var asm = generator.Compile(source.ToString(), asmName);
+            var asm = generator.Compile(source, asmName);
 
             var type = asm.ExportedTypes.First();
 
@@ -246,7 +241,29 @@ namespace CodeProxy
         {
             return (T)Activator.CreateInstance(CreateType(), new Func<int, object, object, string, object>(_interceptors.InterceptProperty), new Func<object, IDictionary<string, object>, string, object>(_interceptors.InterceptMethod));
         }
-        
+
+        internal static string GetPropertyName<TField>(Expression<Func<T, TField>> propertyExpression)
+        {
+            return (propertyExpression.Body as MemberExpression ?? ((UnaryExpression)propertyExpression.Body).Operand as MemberExpression).Member.Name;
+        }
+
+        private TypeInfo ValidateType()
+        {
+            var type = typeof(T).GetTypeInfo();
+
+            if (type.IsSealed)
+            {
+                throw new ArgumentException($"Sealed types not supported: {type.FullName}");
+            }
+
+            if (type.IsGenericTypeDefinition)
+            {
+                throw new ArgumentException($"Open generic types not supported: {type.FullName}");
+            }
+
+            return type;
+        }
+
         private ClassFactory<T> AddPropertyImplementation(PropertyInterceptionType interceptType, string propertyName, Func<T, PropertyInfo, object, object> interceptor)
         {
             _interceptors.Add((o, d, p, v) =>
@@ -259,32 +276,6 @@ namespace CodeProxy
             });
 
             return this;
-        }
-
-        private string GetUsings(IEnumerable<Type> types)
-        {
-            return types.Select(t => t.Namespace).OrderBy(n => n).Distinct().Aggregate(new StringBuilder(), (s, n) => s.AppendLine("using " + n + ";")).ToString();
-        }
-
-        private string GetFullName(Type type)
-        {
-            var nameBuilder = type.Name;
-
-            var cur = type;
-
-            while (cur.DeclaringType != null)
-            {
-                nameBuilder = cur.DeclaringType.Name + "." + nameBuilder;
-
-                cur = cur.DeclaringType;
-            }
-
-            return nameBuilder.ToString();
-        }
-
-        internal static string GetPropertyName<TField>(Expression<Func<T, TField>> propertyExpression)
-        {
-            return (propertyExpression.Body as MemberExpression ?? ((UnaryExpression)propertyExpression.Body).Operand as MemberExpression).Member.Name;
         }
 
         private string GetAsmName()
@@ -309,7 +300,7 @@ namespace CodeProxy
             {
                 var iftn = new List<Type>();
 
-                foreach(var t2 in ift)
+                foreach (var t2 in ift)
                 {
                     iftn.AddRange(t2.GetTypeInfo().GetInterfaces());
                     yield return t2;
@@ -354,66 +345,6 @@ namespace CodeProxy
                     yield return ifaceb;
                 }
             }
-        } 
-
-        private void WriteMethods(MethodInfo method, StringBuilder output)
-        {
-            var code = output;
-            var type = method.ReturnType;
-            var returnTypeName = type.GetTypeName();
-            var methodSig = method.GetMethodSignature();
-            var tc = Type.GetTypeCode(method.ReturnType);
-
-            code.Append("public " + returnTypeName + " " + method.Name + "(");
-
-            int i = 0;
-
-            foreach (var parameter in method.GetParameters())
-            {
-                code.AppendFormat("{0}{1} {2}", ((i++ > 0) ? "," : ""), parameter.ParameterType.Name, parameter.Name);
-            }
-
-            code.AppendLine(") {");
-            code.AppendLine("var parameters = new Dictionary<string, object>();");
-
-            foreach (var parameter in method.GetParameters())
-            {
-                code.AppendFormat("parameters[\"{0}\"] = {1};", parameter.Name, parameter.Name);
-            }
-
-            code.AppendLine("var res = InterceptMethod(parameters, \"" + methodSig + "\");");
-
-            switch (tc)
-            {
-                case TypeCode.Object:
-                    if (returnTypeName != "void") code.AppendLine("return res as " + returnTypeName + ";");
-                    break;
-                default:
-                    code.AppendLine("return (" + returnTypeName + ")res;");
-                    break;
-            }
-
-            code.AppendLine("}");
-        }
-
-        private void WritePropDeclaration(PropertyInfo prop, StringBuilder output)
-        {
-            var type = prop.PropertyType;
-            var name = prop.Name;
-            var returnTypeName = type.GetTypeName();
-            var privateName = "_" + GetCamCase(name);
-
-            output.AppendLine("private " + returnTypeName + " " + privateName + ";");
-            output.AppendLine("public " + returnTypeName + " " + name +
-                " { get { return InterceptGet<" + returnTypeName + ">(" + privateName + ",\"" + name + "\");" + 
-                "} set { " + privateName + " = InterceptSet<" + returnTypeName + ">(value,\"" + name + "\"); } }");
-        }
-
-        private string GetCamCase(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return name;
-
-            return name.Substring(0, 1).ToLower() + (name.Length > 1 ? name.Substring(1) : "");
         }
     }
 }

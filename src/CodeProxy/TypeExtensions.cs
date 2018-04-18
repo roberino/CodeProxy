@@ -42,10 +42,15 @@ namespace CodeProxy
 
         internal static IEnumerable<MethodInfo> GetAbstractAndVirtualMethods(this TypeInfo type)
         {
-            return type
+            var methods = type
                 .GetTypeChain()
-                .SelectMany(t => t.GetMethods().Where(m => !m.IsSpecialName && (m.IsAbstract || m.IsVirtual)))
-                .Distinct();
+                .SelectMany(t => 
+                    t.GetMethods()
+                    .Where(m => !m.IsSpecialName && (m.IsAbstract || m.IsVirtual))
+                    .OrderBy(m => m.DeclaringType.GetTypeInfo() == type ? 0 : 1))
+                .Distinct(MethodComparer.Instance);
+
+            return methods;
         }
 
         internal static string GetTypeName(this Type type)
