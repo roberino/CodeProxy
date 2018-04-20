@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -11,6 +12,13 @@ namespace CodeProxy
         public static bool AsyncMethods(MethodInfo m)
         {
             return _taskType.IsAssignableFrom(m.ReturnType);
+        }
+
+        public static bool AsyncMethods(MethodInfo m, Type resultType)
+        {
+            return _taskType.IsAssignableFrom(m.ReturnType) && 
+                m.ReturnType.IsGenericType && 
+                m.ReturnType.GetGenericArguments().First() == resultType;
         }
 
         public static bool NonAsyncMethods(MethodInfo m)

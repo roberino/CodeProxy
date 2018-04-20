@@ -3,12 +3,50 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CodeProxy
 {
     internal static class TypeExtensions
     {
-        internal static IEnumerable<TypeInfo> GetTypeChain(this TypeInfo type)
+        public static Task ConvertTask(this Task task, Type expectedResultType)
+        {
+            if (task.GetType().GetGenericArguments().First() != expectedResultType)
+            {
+                var result = task.GetTaskResult();
+
+                var resultMethod = typeof(Task).GetMethod("FromResult").MakeGenericMethod(expectedResultType);
+
+                return (Task)resultMethod.Invoke(null, new object[] { result });
+            }
+
+            return task;
+        }
+
+        public static Task ConvertToTask(this object result, Type expectedResultType)
+        {
+            if (expectedResultType == null) return Task.FromResult(true);
+
+            var resultMethod = typeof(Task).GetMethod("FromResult").MakeGenericMethod(expectedResultType);
+
+            return (Task)resultMethod.Invoke(null, new object[] { result });
+        }
+
+        public static Type CreateTaskType(Type resultType)
+        {
+            return typeof(Task<>).MakeGenericType(resultType);
+        }
+
+        public static object GetTaskResult(this Task task)
+        {
+            const string resultProperty = "Result";
+            
+            var rprop = task.GetType().GetProperty(resultProperty);
+
+            return rprop.GetValue(task);
+        }
+
+        public static IEnumerable<TypeInfo> GetTypeChain(this TypeInfo type)
         {
             yield return type;
 
@@ -33,14 +71,14 @@ namespace CodeProxy
             }
         }
 
-        internal static IEnumerable<PropertyInfo> GetAllProperties(this TypeInfo type)
+        public static IEnumerable<PropertyInfo> GetAllProperties(this TypeInfo type)
         {
             return type.GetTypeChain()
-                .SelectMany(t => t.GetProperties())
-                .Distinct();
+                .SelectMany(t => t.GetProperties().Where(p => p.GetMethod.IsAbstract))
+                .Distinct(PropertyComparer.Instance);
         }
 
-        internal static IEnumerable<MethodInfo> GetAbstractAndVirtualMethods(this TypeInfo type)
+        public static IEnumerable<MethodInfo> GetAbstractAndVirtualMethods(this TypeInfo type)
         {
             var methods = type
                 .GetTypeChain()
@@ -53,7 +91,7 @@ namespace CodeProxy
             return methods;
         }
 
-        internal static string GetTypeName(this Type type)
+        public static string GetTypeName(this Type type)
         {
             if (type == typeof(void))
             {
@@ -95,7 +133,7 @@ namespace CodeProxy
             }
         }
 
-        internal static string GetMethodSignature(this MethodInfo method)
+        public static string GetMethodSignature(this MethodInfo method)
         {
             return method.Name + "$" + GetParameterSig(method.GetParameters());
         }

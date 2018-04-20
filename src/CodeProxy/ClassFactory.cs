@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -133,7 +134,31 @@ namespace CodeProxy
             {
                 if (MethodFilters.AsyncMethods(m))
                 {
-                    return interceptor(m, p);
+                    var val = interceptor(m, p);
+
+                    return val;
+                }
+
+                return ObjectConstants.IgnoreValue;
+            });
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a method implementation
+        /// </summary>
+        /// <param name="interceptor">A function which will be called when a method is invoked - the function will be
+        /// passed the method info and the property value</param>
+        public ClassFactory<T> AddAsyncMethodImplementation(Func<MethodInfo, IDictionary<string, object>, Task<GenericTaskResult>> interceptor)
+        {
+            _interceptors.Add((o, m, p) =>
+            {
+                if (MethodFilters.AsyncMethods(m))
+                {
+                    var val = interceptor(m, p);
+
+                    return val.Result.ConvertResult();
                 }
 
                 return ObjectConstants.IgnoreValue;
@@ -225,6 +250,10 @@ namespace CodeProxy
                 generator.UseReference(rtype);
             }
 
+            SourceCreated?.Invoke(source);
+
+            File.WriteAllText("prox.cs", source);
+
             var asm = generator.Compile(source, asmName);
 
             var type = asm.ExportedTypes.First();
@@ -241,6 +270,8 @@ namespace CodeProxy
         {
             return (T)Activator.CreateInstance(CreateType(), new Func<int, object, object, string, object>(_interceptors.InterceptProperty), new Func<object, IDictionary<string, object>, string, object>(_interceptors.InterceptMethod));
         }
+
+        internal event Action<string> SourceCreated;
 
         internal static string GetPropertyName<TField>(Expression<Func<T, TField>> propertyExpression)
         {

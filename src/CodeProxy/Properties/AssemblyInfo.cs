@@ -17,3 +17,4 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("3eec3171-92fd-4f25-a7ff-a3cce00abe29")]
 [assembly: InternalsVisibleTo("CodeProxy.Tests")]
+[assembly: InternalsVisibleTo("CodeProxy.FailSafe")]

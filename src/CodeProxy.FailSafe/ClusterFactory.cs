@@ -8,14 +8,28 @@ namespace CodeProxy.FailSafe
 {
     public sealed class ClusterFactory
     {
-        private static readonly PropertyInfo _resultProperty =
-            typeof(Task<>).GetProperty("Result");
-
         public Cluster<T> Create<T> (IEnumerable<T> components) where T : class
         {
             var classFactory = new ClassFactory<T>();
 
             var cluster = new Cluster<T>(classFactory.CreateInstance());
+
+            classFactory.AddPropertyGetter((i, p, v) =>
+            {
+                foreach (var component in components)
+                {
+                    try
+                    {
+                        return p.GetValue(component);
+                    }
+                    catch (Exception ex)
+                    {
+                        cluster.RaiseError(component, ex);
+                    }
+                }
+
+                throw ClusterFailedException();
+            });
 
             classFactory.AddMethodImplementation(
                 MethodFilters.NonAsyncMethods, 
@@ -50,10 +64,14 @@ namespace CodeProxy.FailSafe
                         var x = Bind<T>(m, component);
 
                         var task = (Task)x(a);
-
+                        
                         await task;
 
-                        return GetTaskResult(task);
+                        var taskType = m.ReturnType.GetGenericArguments().FirstOrDefault();
+                        
+                        var result = task.GetTaskResult();
+
+                        return new GenericTaskResult(task, result, taskType);
                     }
                     catch (Exception ex)
                     {
@@ -74,9 +92,11 @@ namespace CodeProxy.FailSafe
 
         private object GetTaskResult(Task task)
         {
-            // var rtype = task.GetType().GetGenericArguments().First();
+            const string resultProperty = "Result";
 
-            return _resultProperty.GetValue(task);
+            var rprop = task.GetType().GetProperty(resultProperty);
+
+            return rprop.GetValue(task);
         }
 
         private Exception ClusterFailedException()

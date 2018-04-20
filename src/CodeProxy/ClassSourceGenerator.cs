@@ -86,7 +86,7 @@ namespace CodeProxy
             var methodSig = method.GetMethodSignature();
             var tc = Type.GetTypeCode(method.ReturnType);
             var dt = method.DeclaringType.GetTypeInfo();
-            var overrideOp = dt.IsClass && ((method.IsAbstract && dt.IsAbstract) || method.IsVirtual) ? "override" : null;
+            var overrideOp = dt.IsClass && ((method.IsAbstract && dt.IsAbstract) || (!method.IsFinal && method.IsVirtual)) ? "override" : null;
 
             code.Append($"public {overrideOp} {returnTypeName} {method.Name}(");
 
@@ -102,7 +102,7 @@ namespace CodeProxy
 
             foreach (var parameter in method.GetParameters())
             {
-                code.AppendFormat("parameters[\"{0}\"] = {1};", parameter.Name, parameter.Name);
+                code.AppendFormat("parameters[\"{0}\"] = {1};\n", parameter.Name, parameter.Name);
             }
 
             code.AppendLine("var res = InterceptMethod(parameters, \"" + methodSig + "\");");

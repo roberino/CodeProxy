@@ -122,7 +122,7 @@ namespace CodeProxy.Tests
         }
 
         [Test]
-        public async Task WhenInterceptAsyncMethod_ThenAsyncResultReturned()
+        public async Task WhenInterceptAsyncMethodWithAsyncMethodImplementation_ThenAsyncResultReturned()
         {
             var fact = new ClassFactory<IIsAsync>();
 
