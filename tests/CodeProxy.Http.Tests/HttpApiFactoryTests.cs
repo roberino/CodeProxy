@@ -33,7 +33,7 @@ namespace CodeProxy.Http.Tests
         [Fact]
         public async Task Create_WhenInvoked_ReturnsProxy()
         {
-            var factory = new HttpApiFactory<ITestApi>();
+            var factory = new HttpApiFactory<ITestApi>(_client);
 
             var proxy = factory.Create(_client.BaseAddress);
 

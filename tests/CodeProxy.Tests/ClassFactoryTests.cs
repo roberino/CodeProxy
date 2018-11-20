@@ -126,7 +126,7 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<IIsAsync>();
 
-            fact.AddAsyncMethodImplementation(async (m, p) =>
+            fact.AddAsyncMethodImplementation(async (i, m, p) =>
             {
                 await Task.Delay(2);
 
@@ -186,7 +186,7 @@ namespace CodeProxy.Tests
 
             fact.AddMethodImplementation("MethodY", (i, m, p) =>
             {
-                var val = p.Single().Value.ToString();
+                var val = p.First().Value.ToString();
 
                 return i.ValueY + "/" + val;
             });
@@ -299,7 +299,7 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<IsAsync>();
 
-            fact.AddAsyncMethodImplementation(async (m, a) => await Task.FromResult("x"));
+            fact.AddAsyncMethodImplementation(async (i, m, a) => await Task.FromResult("x"));
 
             var instance = fact.CreateInstance();
 
@@ -313,7 +313,7 @@ namespace CodeProxy.Tests
         {
             var fact = new ClassFactory<IsAbstractAsync>();
 
-            fact.AddAsyncMethodImplementation(async (m, a) => await Task.FromResult("x"));
+            fact.AddAsyncMethodImplementation(async (i, m, a) => await Task.FromResult("x"));
 
             var instance = fact.CreateInstance();
 
@@ -322,12 +322,27 @@ namespace CodeProxy.Tests
             Assert.That(result, Is.EqualTo("x"));
         }
 
+        [Test]
+        public void WhenGenericInterface_CanCreateInstance()
+        {
+            var fact = new ClassFactory<IGeneric<string>>();
+
+            var instance = fact.CreateInstance();
+
+            Assert.That(instance, Is.Not.Null);
+        }
+
         public class IsAsync : IIsAsync
         {
             public virtual Task<string> GetStuffAsync()
             {
                 return Task.FromResult("hey");
             }
+        }
+
+        public interface IGeneric<T> 
+        {
+            T GetStuff();
         }
 
         public abstract class IsAbstractAsync : IIsAsync

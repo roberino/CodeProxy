@@ -10,7 +10,7 @@ namespace CodeProxy.Http
 {
     public class HttpApiFactory<T> where T : class, IHttpApiClient
     {
-        private MethodInfo _asyncInvoker;
+        private readonly MethodInfo _asyncInvoker;
         private readonly IHttpClient _httpClient;
         private readonly MethodBinder _methodBinder;
         private readonly IMediaSerializer _mediaSerialiser;
@@ -23,7 +23,12 @@ namespace CodeProxy.Http
 
             var myMethods = GetType().GetTypeInfo().GetMethods(BindingFlags.NonPublic | BindingFlags.Instance);
 
-            _asyncInvoker = myMethods.Where(n => n.Name.StartsWith("InvokeServiceTypedAsync")).FirstOrDefault();
+            _asyncInvoker = myMethods.FirstOrDefault(n => n.Name.StartsWith("InvokeServiceTypedAsync"));
+        }
+
+        public HttpApiFactory(HttpClient httpClient, IMediaSerializer mediaSerialiser = null)
+            : this(new HttpClientWrapper(httpClient), mediaSerialiser)
+        {
         }
 
         public T Create(Uri apiBaseUri)
@@ -34,6 +39,7 @@ namespace CodeProxy.Http
             classFactory.AddPropertyGetter(x => x.GlobalHeaders, (i, p, v) => headers);
 
             classFactory.AddMethodImplementation(InvokeService);
+            classFactory.AddAsyncMethodImplementation(InvokeServiceAsync);
 
             var instance = classFactory.CreateInstance();
 

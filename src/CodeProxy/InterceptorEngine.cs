@@ -5,20 +5,24 @@ using System.Reflection;
 
 namespace CodeProxy
 {
-    internal sealed class InterceptorEngine<T> where T : class
+    internal sealed class InterceptorEngine
     {
-        private readonly IList<Func<object, PropertyInterceptionType, PropertyInfo, object, object>> _propertyInterceptors;
+        private readonly IList<Func<object, PropertyInterceptionType, PropertyInfo, object, object>>
+            _propertyInterceptors;
+
         private readonly IList<Func<object, MethodInfo, IDictionary<string, object>, object>> _methodInterceptors;
         private readonly IDictionary<string, PropertyInfo> _properties;
         private readonly IDictionary<string, MethodInfo> _methods;
 
-        internal InterceptorEngine()
+        internal InterceptorEngine(TypeInfo type)
         {
             _propertyInterceptors = new List<Func<object, PropertyInterceptionType, PropertyInfo, object, object>>();
             _methodInterceptors = new List<Func<object, MethodInfo, IDictionary<string, object>, object>>();
-            _properties = typeof(T).GetTypeInfo().GetAllProperties().ToDictionary(p => p.Name, p => p);
-            _methods = typeof(T).GetTypeInfo().GetAbstractAndVirtualMethods().ToDictionary(m => m.GetMethodSignature(), m => m);
+            _properties = type.GetAllProperties().ToDictionary(p => p.Name, p => p);
+            _methods = type.GetAbstractAndVirtualMethods().ToDictionary(m => m.GetMethodSignature(), m => m);
         }
+
+        public event EventHandler<InterceptionEventArgs> Intercept;
 
         public void Add(Func<object, PropertyInterceptionType, PropertyInfo, object, object> interceptor)
         {
@@ -42,18 +46,20 @@ namespace CodeProxy
 
         public object InterceptGet(object instance, object value, string propName)
         {
-            return InterceptProperty((int)PropertyInterceptionType.GetProperty, instance, value, propName);
+            return InterceptProperty((int) PropertyInterceptionType.GetProperty, instance, value, propName);
         }
 
         public object InterceptSet(object instance, object value, string propName)
         {
-            return InterceptProperty((int)PropertyInterceptionType.SetProperty, instance, value, propName);
+            return InterceptProperty((int) PropertyInterceptionType.SetProperty, instance, value, propName);
         }
 
         public object InterceptMethod(object instance, IDictionary<string, object> parameters, string methodSignature)
         {
             object nextVal = null;
             var method = _methods[methodSignature];
+            var rtype = method.ReturnType.GetTypeInfo();
+            var tc = Type.GetTypeCode(rtype);
             object val = null;
 
             foreach (var interceptor in _methodInterceptors)
@@ -66,27 +72,27 @@ namespace CodeProxy
                 }
             }
 
-            if (val == null && Type.GetTypeCode(method.ReturnType) != TypeCode.Object)
+            if (val == null && tc != TypeCode.Object && tc != TypeCode.String)
             {
-                var ctor = method.ReturnType.GetTypeInfo().GetConstructor(Type.EmptyTypes);
-                val = ctor?.Invoke(null);  // return default primative type
+                val = Activator.CreateInstance(rtype); // return default primative type
             }
+
+            Intercept?.Invoke(this, new InterceptionEventArgs(method, parameters, val));
 
             return val;
         }
 
         public object InterceptProperty(int itype, object instance, object value, string propName)
         {
-            object nextVal = null;
             var val = value;
+
+            var prop = _properties[propName];
 
             if (_propertyInterceptors.Any())
             {
-                var prop = _properties[propName];
-
                 foreach (var interceptor in _propertyInterceptors)
                 {
-                    nextVal = interceptor(instance, (PropertyInterceptionType)itype, prop, val);
+                    var nextVal = interceptor(instance, (PropertyInterceptionType) itype, prop, val);
 
                     if (!(nextVal is ObjectConstants.Ignore)) // TODO: Not very optimised
                     {
@@ -94,6 +100,8 @@ namespace CodeProxy
                     }
                 }
             }
+
+            Intercept?.Invoke(this, new InterceptionEventArgs(prop, value, val));
 
             return val;
         }

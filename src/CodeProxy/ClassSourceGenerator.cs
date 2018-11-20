@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace CodeProxy
 {
@@ -19,23 +17,28 @@ namespace CodeProxy
 
         public string CreateSource(string asmName, IEnumerable<PropertyInfo> properties, IEnumerable<MethodInfo> methods, IEnumerable<Type> referencedTypes)
         {
-            var source = new StringBuilder();
+            var source = new ClassSourceBuilder();
+
             var name = asmName + "C";
             var targType = typeof(T);
-            var targTypeName = GetFullName(targType);
+            var targTypeName = ClassSourceBuilder.GetFullName(targType);
             var interceptorTypeName = "InterceptorEngine<" + targTypeName + ">";
 
-            source.AppendLine("using System;");
-            source.AppendLine("using " + targType.Namespace + ";");
-            source.AppendLine("using " + GetType().Namespace + ";");
-            source.Append(GetUsings(referencedTypes));
-            source.AppendLine("public class " + name + " : " + targTypeName + " {");
+            source
+                .WriteNamespace("System")
+                .WriteNamespaceOfType(targType)
+                .WriteNamespaceOfType(GetType())
+                .WriteNamespaceOfTypes(referencedTypes)
+                .OpenClassDefinition(name, targType, typeof(IHasMutableState));
+
             source.AppendLine("private readonly Func<int, object, object, string, object> _pi;");
             source.AppendLine("private readonly Func<object, IDictionary<string, object>, string, object> _mi;");
-            source.AppendLine("public " + name + "(Func<int, object, object, string, object> pi, Func<object, IDictionary<string, object>, string, object> mi) { _pi = pi; _mi = mi; }");
+            source.AppendLine("public " + name + "(Func<int, object, object, string, object> pi, Func<object, IDictionary<string, object>, string, object> mi, object state) { _pi = pi; _mi = mi; __state = state; }");
             source.AppendLine("public T InterceptGet<T>(T val, string name) { return (T)_pi(2, this, val, name); }");
             source.AppendLine("public T InterceptSet<T>(T val, string name) { return (T)_pi(1, this, val, name); }");
             source.AppendLine("public object InterceptMethod(IDictionary<string, object> parameters, string name) { return _mi(this, parameters, name); }");
+
+            source.WriteReadOnlyGetPropertyDefinition("__state", "object");
 
             foreach (var prop in properties)
             {
@@ -47,7 +50,7 @@ namespace CodeProxy
                 WriteMethods(method, source);
             }
 
-            source.AppendLine("}");
+            source.CloseBlock();
 
             return source.ToString();
         }
@@ -57,28 +60,7 @@ namespace CodeProxy
             return _type.Name + "I" + (_typeCounter++);
         }
 
-        private string GetUsings(IEnumerable<Type> types)
-        {
-            return types.Select(t => t.Namespace).OrderBy(n => n).Distinct().Aggregate(new StringBuilder(), (s, n) => s.AppendLine("using " + n + ";")).ToString();
-        }
-
-        private string GetFullName(Type type)
-        {
-            var nameBuilder = type.Name;
-
-            var cur = type;
-
-            while (cur.DeclaringType != null)
-            {
-                nameBuilder = cur.DeclaringType.Name + "." + nameBuilder;
-
-                cur = cur.DeclaringType;
-            }
-
-            return nameBuilder.ToString();
-        }
-
-        private void WriteMethods(MethodInfo method, StringBuilder output)
+        private void WriteMethods(MethodInfo method, ClassSourceBuilder output)
         {
             var code = output;
             var type = method.ReturnType;
@@ -86,23 +68,14 @@ namespace CodeProxy
             var methodSig = method.GetMethodSignature();
             var tc = Type.GetTypeCode(method.ReturnType);
             var dt = method.DeclaringType.GetTypeInfo();
-            var overrideOp = dt.IsClass && ((method.IsAbstract && dt.IsAbstract) || (!method.IsFinal && method.IsVirtual)) ? "override" : null;
 
-            code.Append($"public {overrideOp} {returnTypeName} {method.Name}(");
+            code.OpenMethod(method, dt);
 
-            int i = 0;
-
-            foreach (var parameter in method.GetParameters())
-            {
-                code.AppendFormat("{0}{1} {2}", ((i++ > 0) ? "," : ""), parameter.ParameterType.Name, parameter.Name);
-            }
-
-            code.AppendLine(") {");
             code.AppendLine("var parameters = new Dictionary<string, object>();");
 
             foreach (var parameter in method.GetParameters())
             {
-                code.AppendFormat("parameters[\"{0}\"] = {1};\n", parameter.Name, parameter.Name);
+                code.AppendLine($"parameters[\"{parameter.Name}\"] = {parameter.Name};");
             }
 
             code.AppendLine("var res = InterceptMethod(parameters, \"" + methodSig + "\");");
@@ -117,10 +90,10 @@ namespace CodeProxy
                     break;
             }
 
-            code.AppendLine("}");
+            code.CloseBlock();
         }
 
-        private void WritePropDeclaration(PropertyInfo prop, StringBuilder output)
+        private void WritePropDeclaration(PropertyInfo prop, ClassSourceBuilder output)
         {
             var type = prop.PropertyType;
             var name = prop.Name;
@@ -128,9 +101,11 @@ namespace CodeProxy
             var privateName = "_" + GetCamCase(name);
 
             output.AppendLine("private " + returnTypeName + " " + privateName + ";");
-            output.AppendLine("public " + returnTypeName + " " + name +
-                " { get { return InterceptGet<" + returnTypeName + ">(" + privateName + ",\"" + name + "\");" +
-                "} set { " + privateName + " = InterceptSet<" + returnTypeName + ">(value,\"" + name + "\"); } }");
+
+            var gb = " return InterceptGet<" + returnTypeName + ">(" + privateName + ",\"" + name + "\");";
+            var sb = privateName + " = InterceptSet<" + returnTypeName + ">(value,\"" + name + "\");";
+
+            output.WritePropertyDefinition(name, returnTypeName, gb, sb);
         }
 
         private string GetCamCase(string name)

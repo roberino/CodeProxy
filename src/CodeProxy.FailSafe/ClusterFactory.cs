@@ -55,7 +55,7 @@ namespace CodeProxy.FailSafe
             });
 
             classFactory.AddAsyncMethodImplementation(
-                async (m, a) =>
+                async (i, m, a) =>
             {
                 foreach (var component in components)
                 {
@@ -67,11 +67,7 @@ namespace CodeProxy.FailSafe
                         
                         await task;
 
-                        var taskType = m.ReturnType.GetGenericArguments().FirstOrDefault();
-                        
-                        var result = task.GetTaskResult();
-
-                        return new GenericTaskResult(task, result, taskType);
+                        return task.GetTaskResult();
                     }
                     catch (Exception ex)
                     {

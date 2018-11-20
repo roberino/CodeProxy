@@ -91,6 +91,11 @@ namespace CodeProxy
             return methods;
         }
 
+        public static string GetSanitisedTypeName(this Type type)
+        {
+            return GetTypeName(type).Replace("<", "_").Replace(",", "").Replace(">", "");
+        }
+
         public static string GetTypeName(this Type type)
         {
             if (type == typeof(void))
